@@ -15,6 +15,7 @@
   function toggleScrolled() {
     const selectBody = document.querySelector('body');
     const selectHeader = document.querySelector('#header');
+    if (!selectHeader || !selectBody) return;
     if (!selectHeader.classList.contains('scroll-up-sticky') && !selectHeader.classList.contains('sticky-top') && !selectHeader.classList.contains('fixed-top')) return;
     window.scrollY > 100 ? selectBody.classList.add('scrolled') : selectBody.classList.remove('scrolled');
   }
@@ -80,13 +81,15 @@
       window.scrollY > 100 ? scrollTop.classList.add('active') : scrollTop.classList.remove('active');
     }
   }
-  scrollTop.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
+  if (scrollTop) {
+    scrollTop.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     });
-  });
+  }
 
   window.addEventListener('load', toggleScrollTop);
   document.addEventListener('scroll', toggleScrollTop);
@@ -95,6 +98,10 @@
    * Animation on scroll function and init
    */
   function aosInit() {
+    if (typeof AOS === 'undefined') {
+      console.warn('AOS library is not loaded.');
+      return;
+    }
     AOS.init({
       duration: 600,
       easing: 'ease-in-out',
@@ -107,23 +114,38 @@
   /**
    * Initiate glightbox
    */
-  const glightbox = GLightbox({
-    selector: '.glightbox'
-  });
+  if (typeof GLightbox !== 'undefined') {
+    const glightbox = GLightbox({
+      selector: '.glightbox'
+    });
+  } else {
+    console.warn('GLightbox library is not loaded.');
+  }
 
   /**
    * Init swiper sliders
    */
   function initSwiper() {
+    if (typeof Swiper === 'undefined') {
+      console.warn('Swiper library is not loaded.');
+      return;
+    }
     document.querySelectorAll(".init-swiper").forEach(function(swiperElement) {
-      let config = JSON.parse(
-        swiperElement.querySelector(".swiper-config").innerHTML.trim()
-      );
+      try {
+        const configEl = swiperElement.querySelector(".swiper-config");
+        if (!configEl) {
+          console.warn('Swiper config element not found in:', swiperElement);
+          return;
+        }
+        let config = JSON.parse(configEl.innerHTML.trim());
 
-      if (swiperElement.classList.contains("swiper-tab")) {
-        initSwiperWithCustomPagination(swiperElement, config);
-      } else {
-        new Swiper(swiperElement, config);
+        if (swiperElement.classList.contains("swiper-tab")) {
+          initSwiperWithCustomPagination(swiperElement, config);
+        } else {
+          new Swiper(swiperElement, config);
+        }
+      } catch (error) {
+        console.error('Error initializing Swiper:', error);
       }
     });
   }
@@ -143,30 +165,45 @@
    * Animate the skills items on reveal
    */
   let skillsAnimation = document.querySelectorAll('.skills-animation');
-  skillsAnimation.forEach((item) => {
-    new Waypoint({
-      element: item,
-      offset: '80%',
-      handler: function(direction) {
-        let progress = item.querySelectorAll('.progress .progress-bar');
-        progress.forEach(el => {
-          el.style.width = el.getAttribute('aria-valuenow') + '%';
-        });
-      }
+  if (typeof Waypoint !== 'undefined') {
+    skillsAnimation.forEach((item) => {
+      new Waypoint({
+        element: item,
+        offset: '80%',
+        handler: function(direction) {
+          let progress = item.querySelectorAll('.progress .progress-bar');
+          progress.forEach(el => {
+            el.style.width = el.getAttribute('aria-valuenow') + '%';
+          });
+        }
+      });
     });
-  });
+  } else if (skillsAnimation.length > 0) {
+    console.warn('Waypoint library is not loaded.');
+  }
 
   /**
    * Init isotope layout and filters
    */
   document.querySelectorAll('.isotope-layout').forEach(function(isotopeItem) {
+    if (typeof Isotope === 'undefined' || typeof imagesLoaded === 'undefined') {
+      console.warn('Isotope or imagesLoaded library is not loaded.');
+      return;
+    }
+
     let layout = isotopeItem.getAttribute('data-layout') ?? 'masonry';
     let filter = isotopeItem.getAttribute('data-default-filter') ?? '*';
     let sort = isotopeItem.getAttribute('data-sort') ?? 'original-order';
 
     let initIsotope;
-    imagesLoaded(isotopeItem.querySelector('.isotope-container'), function() {
-      initIsotope = new Isotope(isotopeItem.querySelector('.isotope-container'), {
+    let container = isotopeItem.querySelector('.isotope-container');
+    if (!container) {
+      console.warn('Isotope container not found in:', isotopeItem);
+      return;
+    }
+
+    imagesLoaded(container, function() {
+      initIsotope = new Isotope(container, {
         itemSelector: '.isotope-item',
         layoutMode: layout,
         filter: filter,
@@ -176,11 +213,16 @@
 
     isotopeItem.querySelectorAll('.isotope-filters li').forEach(function(filters) {
       filters.addEventListener('click', function() {
-        isotopeItem.querySelector('.isotope-filters .filter-active').classList.remove('filter-active');
+        let currentActive = isotopeItem.querySelector('.isotope-filters .filter-active');
+        if (currentActive) {
+          currentActive.classList.remove('filter-active');
+        }
         this.classList.add('filter-active');
-        initIsotope.arrange({
-          filter: this.getAttribute('data-filter')
-        });
+        if (initIsotope) {
+          initIsotope.arrange({
+            filter: this.getAttribute('data-filter')
+          });
+        }
         if (typeof aosInit === 'function') {
           aosInit();
         }

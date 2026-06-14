@@ -6,6 +6,33 @@
   * For more info and help: https://bootstrapmade.com/php-email-form/
   */
 
+  // Only accept POST requests
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    die('Method Not Allowed');
+  }
+
+  // Validate required fields are present and non-empty
+  $required_fields = ['name', 'email', 'subject', 'message'];
+  foreach ($required_fields as $field) {
+    if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
+      http_response_code(400);
+      die("Missing required field: $field");
+    }
+  }
+
+  // Validate email format
+  $email = filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL);
+  if ($email === false) {
+    http_response_code(400);
+    die('Invalid email address');
+  }
+
+  // Sanitize inputs
+  $name = htmlspecialchars(trim($_POST['name']), ENT_QUOTES, 'UTF-8');
+  $subject = htmlspecialchars(trim($_POST['subject']), ENT_QUOTES, 'UTF-8');
+  $message = htmlspecialchars(trim($_POST['message']), ENT_QUOTES, 'UTF-8');
+
   // Replace contact@example.com with your real receiving email address
   $receiving_email_address = 'contact@example.com';
 
@@ -19,9 +46,9 @@
   $contact->ajax = true;
   
   $contact->to = $receiving_email_address;
-  $contact->from_name = $_POST['name'];
-  $contact->from_email = $_POST['email'];
-  $contact->subject = $_POST['subject'];
+  $contact->from_name = $name;
+  $contact->from_email = $email;
+  $contact->subject = $subject;
 
   // Uncomment below code if you want to use SMTP to send emails. You need to enter your correct SMTP credentials
   /*
@@ -33,12 +60,16 @@
   );
   */
 
-  $contact->add_message( $_POST['name'], 'From');
-  $contact->add_message( $_POST['email'], 'Email');
+  $contact->add_message( $name, 'From');
+  $contact->add_message( $email, 'Email');
   if(isset($_POST['phone'])) {
-    $contact->add_message( $_POST['phone'], 'Phone');
+    $contact->add_message( htmlspecialchars(trim($_POST['phone']), ENT_QUOTES, 'UTF-8'), 'Phone');
   }
-  $contact->add_message( $_POST['message'], 'Message', 10);
+  $contact->add_message( $message, 'Message', 10);
 
-  echo $contact->send();
+  $result = $contact->send();
+  if ($result !== 'OK') {
+    http_response_code(500);
+  }
+  echo $result;
 ?>
