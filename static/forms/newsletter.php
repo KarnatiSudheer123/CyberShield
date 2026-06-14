@@ -6,6 +6,25 @@
   * For more info and help: https://bootstrapmade.com/php-email-form/
   */
 
+  // Only accept POST requests
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    die('Method Not Allowed');
+  }
+
+  // Validate email is present and non-empty
+  if (!isset($_POST['email']) || trim($_POST['email']) === '') {
+    http_response_code(400);
+    die('Missing required field: email');
+  }
+
+  // Validate email format
+  $email = filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL);
+  if ($email === false) {
+    http_response_code(400);
+    die('Invalid email address');
+  }
+
   // Replace contact@example.com with your real receiving email address
   $receiving_email_address = 'contact@example.com';
 
@@ -19,9 +38,9 @@
   $contact->ajax = true;
   
   $contact->to = $receiving_email_address;
-  $contact->from_name = $_POST['email'];
-  $contact->from_email = $_POST['email'];
-  $contact->subject ="New Subscription: " . $_POST['email'];
+  $contact->from_name = $email;
+  $contact->from_email = $email;
+  $contact->subject = "New Subscription: " . $email;
 
   // Uncomment below code if you want to use SMTP to send emails. You need to enter your correct SMTP credentials
   /*
@@ -33,7 +52,11 @@
   );
   */
 
-  $contact->add_message( $_POST['email'], 'Email');
+  $contact->add_message( $email, 'Email');
 
-  echo $contact->send();
+  $result = $contact->send();
+  if ($result !== 'OK') {
+    http_response_code(500);
+  }
+  echo $result;
 ?>
